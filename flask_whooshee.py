@@ -108,7 +108,7 @@ class WhoosheeQuery(BaseQuery):
                                match_substrings=match_substrings,
                                limit=limit)
         if not res:
-            return self.filter(text('null'))
+            return self.filter(text('null')), {}
 
         # transform unique field name into model attribute field
         attr = None
@@ -122,21 +122,21 @@ class WhoosheeQuery(BaseQuery):
                 if m.__name__.lower() == uniq.split('_')[0]:
                     attr = getattr(m, uniq.split('_')[1])
 
-        search_query = self.filter(attr.in_(res))
+        search_query = self.filter(attr.in_(res.keys()))
 
         if order_by_relevance < 0: # we want all returned rows ordered
             search_query = search_query.order_by(sqlalchemy.sql.expression.case(
-                [(attr == uniq_val, index) for index, uniq_val in enumerate(res)],
+                [(attr == uniq_val, index) for index, uniq_val in enumerate(res.keys())],
             ))
         elif order_by_relevance > 0: # we want only number of specified rows ordered
             search_query = search_query.order_by(sqlalchemy.sql.expression.case(
-                [(attr == uniq_val, index) for index, uniq_val in enumerate(res) if index < order_by_relevance],
+                [(attr == uniq_val, index) for index, uniq_val in enumerate(res.keys()) if index < order_by_relevance],
                 else_=order_by_relevance
             ))
         else: # no ordering
             pass
 
-        return search_query
+        return search_query, res
 
 class AbstractWhoosheer(object):
     """A superclass for all whoosheers.
@@ -174,9 +174,11 @@ class AbstractWhoosheer(object):
             parser = whoosh.qparser.MultifieldParser(cls.schema.names(), index.schema, group=group)
             query = parser.parse(prepped_string)
             results = searcher.search(query, limit=limit)
+            scored_result = {}
             if values_of:
-                return [x[values_of] for x in results]
-            return results
+                for result in results:
+                    scored_result[result[values_of]] = result.score
+            return scored_result
 
     @classmethod
     def prep_search_string(cls, search_string, match_substrings):
