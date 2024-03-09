@@ -15,7 +15,10 @@ import whoosh.qparser
 from whoosh.filedb.filestore import RamStorage
 
 from flask import current_app
-from flask_sqlalchemy import BaseQuery
+try:
+    from flask_sqlalchemy.query import Query
+except ImportError:
+    from flask_sqlalchemy import BaseQuery as Query
 from sqlalchemy import text, event
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm.mapper import Mapper
@@ -48,7 +51,7 @@ def _assure_dirs_exists(path):
         if err.errno != errno.EEXIST:
             raise
 
-class WhoosheeQuery(BaseQuery):
+class WhoosheeQuery(Query):
     """An override for SQLAlchemy query used to do fulltext search."""
 
     def whooshee_search(self, search_string, group=whoosh.qparser.OrGroup, whoosheer=None,
@@ -295,7 +298,7 @@ class Whooshee(object):
                     pass
 
                 # ensure there can be a stable MRO
-                elif query_class not in (BaseQuery, SQLAQuery, WhoosheeQuery):
+                elif query_class not in (Query, SQLAQuery, WhoosheeQuery):
                     query_class_name = query_class.__name__
                     model.query_class = type(
                         "Whooshee{}".format(query_class_name), (query_class, self.query), {}
