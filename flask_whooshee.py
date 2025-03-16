@@ -129,11 +129,11 @@ class WhoosheeQuery(Query):
 
         if order_by_relevance < 0: # we want all returned rows ordered
             search_query = search_query.order_by(sqlalchemy.sql.expression.case(
-                [(attr == uniq_val, index) for index, uniq_val in enumerate(res.keys())],
+                *[(attr == uniq_val, index) for index, uniq_val in enumerate(res.keys())],
             ))
         elif order_by_relevance > 0: # we want only number of specified rows ordered
             search_query = search_query.order_by(sqlalchemy.sql.expression.case(
-                [(attr == uniq_val, index) for index, uniq_val in enumerate(res.keys()) if index < order_by_relevance],
+                *[(attr == uniq_val, index) for index, uniq_val in enumerate(res.keys()) if index < order_by_relevance],
                 else_=order_by_relevance
             ))
         else: # no ordering
